@@ -58,6 +58,12 @@
   }
   @keyframes popIn { 0% { transform: scale(0.9); opacity: 0; } 100% { transform: scale(1); opacity: 1; } }
   @keyframes slideUp { 0% { transform: translateY(20px); opacity: 0; } 100% { transform: translateY(0); opacity: 1; } }
+  @keyframes celebrate {
+    0% { transform: scale(1); box-shadow: 0 0 0 rgba(0,255,157,0); }
+    30% { transform: scale(1.03); box-shadow: 0 0 30px rgba(0,255,157,0.5); }
+    100% { transform: scale(1); box-shadow: 0 0 0 rgba(0,255,157,0); }
+  }
+  .card.celebrate { animation: celebrate 0.6s ease-out; }
 
   /* --- HEADER & XP --- */
   header {
@@ -144,8 +150,13 @@
     position: relative;
     display: flex; align-items: center;
     justify-content: center;
-    box-shadow: 0 4px 10px rgba(0,0,0,0.6), inset 0 0 10px rgba(0,0,0,0.8);
+    box-shadow: 0 4px 10px rgba(0,0,0,0.6), inset 0 0 10px rgba(0,0,0,0.8), inset 3px 3px 6px rgba(255,255,255,0.08);
     overflow: visible; /* FIX: Allow 3 digits */
+  }
+  .iron-plate::before { /* subtle rim bolt marks */
+    content: ''; position: absolute; inset: 6px;
+    border-radius: 50%; border: 1px solid rgba(255,255,255,0.04);
+    pointer-events: none;
   }
   .iron-plate::after { /* The Hole */
     content: ''; position: absolute; 
@@ -319,6 +330,43 @@
   #challengePlates.visible { display: grid; opacity: 1; }
   #challengeContent { transition: opacity 0.3s; }
 
+  /* --- PLATEAU BADGE --- */
+  .plateau-badge { font-size: 10px; color: #000; background: #ff8c42; padding: 2px 6px; border-radius: 4px; font-weight: 700; margin-right: 5px; cursor: pointer; }
+
+  /* --- NOTE + LAST WEEK CHIP --- */
+  .note-text { font-size: 11px; color: #999; background: #1a1a1a; border: 1px dashed #333; border-radius: 8px; padding: 6px 10px; margin: -4px 0 10px; display: flex; align-items: center; gap: 6px; }
+  .note-btn { color: #555; cursor: pointer; }
+  .lastweek-chip { font-size: 11px; color: #888; margin-bottom: 8px; display: flex; align-items: center; gap: 6px; }
+  .lastweek-chip b { color: #ccc; font-family: var(--font-num); }
+
+  /* --- STRENGTH RATIOS --- */
+  .ratio-row { display: flex; justify-content: space-between; align-items: center; background: #1a1a1a; border-radius: 12px; padding: 12px 15px; margin-bottom: 10px; border: 1px solid #2a2a2a; }
+  .ratio-val { font-family: var(--font-num); font-size: 22px; color: var(--primary); }
+
+  /* --- YEAR HEATMAP --- */
+  .yearmap-scroll { overflow-x: auto; padding-bottom: 8px; }
+  .yearmap-grid { display: grid; grid-template-rows: repeat(7, 12px); grid-auto-flow: column; gap: 3px; width: max-content; }
+  .yearmap-cell { width: 12px; height: 12px; border-radius: 3px; background: #181818; }
+
+  /* --- WARMUP TABLE --- */
+  .warmup-row { display: flex; justify-content: space-between; align-items: center; background: #1a1a1a; border-radius: 10px; padding: 10px 14px; margin-bottom: 8px; border: 1px solid #2a2a2a; font-size: 13px; }
+  .warmup-row b { color: #fff; font-family: var(--font-num); font-size: 16px; }
+
+  /* --- MONTH CHALLENGE --- */
+  .challenge-progress-track { height: 10px; background: #222; border-radius: 5px; overflow: hidden; margin: 15px 0; }
+  .challenge-progress-fill { height: 100%; background: linear-gradient(90deg, var(--gold), #fff); width: 0%; transition: width 0.4s; }
+
+  /* --- PHOTOS --- */
+  .photo-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; max-height: 320px; overflow-y: auto; }
+  .photo-cell { position: relative; aspect-ratio: 1; border-radius: 10px; overflow: hidden; background: #1a1a1a; border: 1px solid #2a2a2a; }
+  .photo-cell img { width: 100%; height: 100%; object-fit: cover; }
+  .photo-cell .photo-month { position: absolute; bottom: 0; left: 0; right: 0; background: rgba(0,0,0,0.7); color: #fff; font-size: 10px; text-align: center; padding: 2px; }
+  .photo-cell .photo-del { position: absolute; top: 3px; left: 3px; background: rgba(255,42,109,0.85); color: #fff; width: 18px; height: 18px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 10px; cursor: pointer; }
+  .photo-add-cell { display: flex; flex-direction: column; align-items: center; justify-content: center; color: #555; cursor: pointer; }
+
+  /* --- POWER SCORE PULSE --- */
+  @keyframes pulseGold { 0%,100% { opacity:1 } 50% { opacity:0.5 } }
+
 </style>
 </head>
 <body>
@@ -329,10 +377,18 @@
     <div class="brand-box">
       <h1>IRON TRACK</h1>
       <div class="rank-display" id="rankDisp">LVL 1 • NEWBIE</div>
-      <div class="volume-box" id="volumeDisp">
-          <i class="fa-solid fa-weight-hanging"></i> 0 KG
+      <div style="display:flex;gap:8px;margin-top:5px">
+        <div class="volume-box" id="volumeDisp" style="margin-top:0">
+            <i class="fa-solid fa-weight-hanging"></i> 0 KG
+        </div>
+        <div class="volume-box" id="streakDisp" style="margin-top:0">
+            <i class="fa-solid fa-fire" style="color:var(--danger)"></i> 0 يوم
+        </div>
+        <div class="volume-box" id="powerScoreDisp" style="margin-top:0" title="قوة اليوم مقارنة بمتوسط جلساتك">
+            <i class="fa-solid fa-bolt" style="color:var(--gold)"></i> --
+        </div>
       </div>
-      <div style="font-size:10px;color:#777;margin-top:2px" id="userHello"></div>
+      <div style="font-size:10px;color:#777;margin-top:4px" id="userHello"></div>
     </div>
     <div style="color:#fff;font-size:24px;cursor:pointer;padding:5px" onclick="openPanel()"><i class="fa-solid fa-bars"></i></div>
   </div>
@@ -396,10 +452,35 @@
       <span class="slider"></span>
     </label>
   </div>
+  <div class="switch-row">
+    <div>
+      <div style="font-size:14px;font-weight:700;color:var(--gold)">وضع مسافر/رمضان ✈️</div>
+      <div style="font-size:11px;color:#777">يقلل أهداف المجموعات ويوقف عد الستريك مؤقتًا</div>
+    </div>
+    <label class="switch">
+      <input type="checkbox" id="travelToggle" onchange="toggleTravelMode()">
+      <span class="slider"></span>
+    </label>
+  </div>
 
   <h3 style="color:#777;font-size:12px;margin-bottom:10px;margin-top:20px;border-bottom:1px solid #333;padding-bottom:5px">إدارة التمارين</h3>
   <button class="modal-btn" onclick="openMuscleMenu()" style="background:var(--primary);color:#000;font-weight:800">تمرين جديد +</button>
   <button class="modal-btn btn-outline" onclick="addBulk()" style="font-size:13px">إضافة 5 تمارين فارغة</button>
+  <button class="modal-btn btn-outline" onclick="copyDayAsNew()" style="font-size:13px">📋 نسخ اليوم الحالي كيوم جديد</button>
+  <button class="modal-btn btn-outline" onclick="openAchievements()" style="font-size:13px">🏅 الأوسمة</button>
+  <div style="display:flex;gap:10px;margin-top:10px">
+    <button class="modal-btn btn-outline" onclick="openHeatmap()" style="font-size:12px;margin:0">🗺️ خريطة الأسبوع</button>
+    <button class="modal-btn btn-outline" onclick="openWeeklyReport()" style="font-size:12px;margin:0">📊 تقرير الأسبوع</button>
+  </div>
+  <div style="display:flex;gap:10px;margin-top:10px">
+    <button class="modal-btn btn-outline" onclick="openYearMap()" style="font-size:12px;margin:0">📅 تقويم السنة</button>
+    <button class="modal-btn btn-outline" onclick="openStrengthRatios()" style="font-size:12px;margin:0">⚖️ نسب القوة</button>
+  </div>
+  <div style="display:flex;gap:10px;margin-top:10px">
+    <button class="modal-btn btn-outline" onclick="openWarmup()" style="font-size:12px;margin:0">🔥 حاسبة الإحماء</button>
+    <button class="modal-btn btn-outline" onclick="openMonthChallenge()" style="font-size:12px;margin:0">🎯 تحدي الشهر</button>
+  </div>
+  <button class="modal-btn btn-outline" onclick="openPhotos()" style="font-size:13px">📸 صور التقدم</button>
 
   <h3 style="color:#777;font-size:12px;margin-bottom:10px;margin-top:20px">إدارة الأيام</h3>
   <div class="day-mgmt-row">
@@ -412,6 +493,12 @@
   </div>
 
   <div style="text-align:center;margin-top:30px;color:#444;font-size:12px" onclick="clearAll()">RESET ALL DATA</div>
+
+  <div style="display:flex;gap:10px;margin-top:15px">
+    <button class="modal-btn btn-outline" style="font-size:12px" onclick="exportBackup()"><i class="fa-solid fa-download"></i> نسخة احتياطية</button>
+    <button class="modal-btn btn-outline" style="font-size:12px" onclick="document.getElementById('importFile').click()"><i class="fa-solid fa-upload"></i> استيراد</button>
+    <input type="file" id="importFile" accept="application/json" style="display:none" onchange="importBackup(this.files[0])">
+  </div>
 </div>
 
 <div class="overlay" id="modalMuscle">
@@ -508,6 +595,93 @@
   </div>
 </div>
 
+<div class="overlay" id="modalHistory">
+  <div class="modal" style="max-width:320px">
+    <div id="historyTitle" style="color:#fff;font-size:18px;font-weight:700;margin-bottom:15px">تطور التمرين</div>
+    <div id="historyBody"></div>
+    <button class="modal-btn btn-outline" style="margin-top:20px" onclick="closeHistory()">إغلاق</button>
+  </div>
+</div>
+
+<div class="overlay" id="modalAchievements">
+  <div class="modal" style="max-width:340px">
+    <div style="color:#fff;font-size:18px;font-weight:700;margin-bottom:15px">الأوسمة 🏅</div>
+    <div id="achievementsGrid" style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;max-height:400px;overflow-y:auto"></div>
+    <button class="modal-btn btn-outline" style="margin-top:20px" onclick="closeAchievements()">إغلاق</button>
+  </div>
+</div>
+
+<div class="overlay" id="modalHeatmap">
+  <div class="modal" style="max-width:340px">
+    <div style="color:#fff;font-size:18px;font-weight:700;margin-bottom:5px">خريطة الأسبوع 🗺️</div>
+    <div style="color:#888;font-size:11px;margin-bottom:15px">عدد المجموعات لكل عضلة في آخر 7 أيام</div>
+    <div id="heatmapGrid" style="display:grid;grid-template-columns:repeat(2,1fr);gap:10px"></div>
+    <button class="modal-btn btn-outline" style="margin-top:20px" onclick="closeHeatmap()">إغلاق</button>
+  </div>
+</div>
+
+<div class="overlay" id="modalWeeklyReport">
+  <div class="modal" style="max-width:340px">
+    <div style="color:#fff;font-size:18px;font-weight:700;margin-bottom:15px">تقرير الأسبوع 📊</div>
+    <div id="weeklyReportBody"></div>
+    <button class="modal-btn btn-outline" style="margin-top:20px" onclick="closeWeeklyReport()">إغلاق</button>
+  </div>
+</div>
+
+<div class="overlay" id="modalStrengthRatio">
+  <div class="modal" style="max-width:340px">
+    <div style="color:#fff;font-size:18px;font-weight:700;margin-bottom:5px">نسب القوة ⚖️</div>
+    <div style="color:#888;font-size:11px;margin-bottom:15px">مقارنة أقوى أرقامك بوزن جسمك</div>
+    <div id="ratioBody"></div>
+    <button class="modal-btn btn-outline" style="margin-top:15px" onclick="closeStrengthRatios()">إغلاق</button>
+  </div>
+</div>
+
+<div class="overlay" id="modalYearMap">
+  <div class="modal" style="max-width:360px">
+    <div style="color:#fff;font-size:18px;font-weight:700;margin-bottom:5px">تقويم السنة 📅</div>
+    <div style="color:#888;font-size:11px;margin-bottom:15px">كل مربع يوم، وكل ما يبقى فاتح كل ما تمرنت أكتر</div>
+    <div class="yearmap-scroll"><div class="yearmap-grid" id="yearmapGrid"></div></div>
+    <div id="yearmapStats" style="margin-top:15px;font-size:12px;color:#888"></div>
+    <button class="modal-btn btn-outline" style="margin-top:15px" onclick="closeYearMap()">إغلاق</button>
+  </div>
+</div>
+
+<div class="overlay" id="modalWarmup">
+  <div class="modal" style="max-width:340px">
+    <div style="color:#fff;font-size:18px;font-weight:700;margin-bottom:15px">حاسبة الإحماء 🔥</div>
+    <input type="number" id="warmupWeightInput" class="input-dark" placeholder="الوزن الشغال (كجم)" style="margin-bottom:15px" oninput="calcWarmup(this.value)">
+    <div id="warmupBody"></div>
+    <button class="modal-btn btn-outline" style="margin-top:15px" onclick="closeWarmup()">إغلاق</button>
+  </div>
+</div>
+
+<div class="overlay" id="modalMonthChallenge">
+  <div class="modal" style="max-width:340px">
+    <div style="font-size:40px;margin-bottom:5px">🎯</div>
+    <div style="color:#fff;font-size:18px;font-weight:700;margin-bottom:5px" id="mcTitle">تحدي الشهر</div>
+    <div style="color:#888;font-size:12px;margin-bottom:10px" id="mcSub"></div>
+    <div class="challenge-progress-track"><div class="challenge-progress-fill" id="mcFill"></div></div>
+    <div style="color:#fff;font-family:var(--font-num);font-size:20px;margin-bottom:15px" id="mcCount">0 / 0</div>
+    <div style="display:flex;gap:10px">
+      <input type="number" id="mcAddInput" class="input-dark" placeholder="كام؟" style="width:80px">
+      <button class="modal-btn" style="background:var(--gold);color:#000;flex:1;margin:0" onclick="incrementChallenge()">إضافة للتحدي</button>
+    </div>
+    <button class="modal-btn btn-outline" style="margin-top:15px" onclick="rerollChallenge()">🎲 تحدي تاني</button>
+    <button class="modal-btn btn-outline" onclick="closeMonthChallenge()">إغلاق</button>
+  </div>
+</div>
+
+<div class="overlay" id="modalPhotos">
+  <div class="modal" style="max-width:360px">
+    <div style="color:#fff;font-size:18px;font-weight:700;margin-bottom:5px">صور التقدم 📸</div>
+    <div style="color:#888;font-size:11px;margin-bottom:15px">صورة واحدة كل شهر، متخزنة على جهازك بس</div>
+    <div class="photo-grid" id="photoGrid"></div>
+    <input type="file" id="photoFileInput" accept="image/*" style="display:none" onchange="addPhoto(this.files[0])">
+    <button class="modal-btn btn-outline" style="margin-top:15px" onclick="closePhotos()">إغلاق</button>
+  </div>
+</div>
+
 <script>
 // --- ANATOMY ICONS (SVG PATHS) ---
 // Using constructed SVG strings to avoid external requests
@@ -590,14 +764,28 @@ const PR_KEY = 'iron_track_prs_v14';
 const DAYS_KEY = 'iron_track_days_v14';
 const PROFILE_KEY = 'iron_track_profile_v14';
 const SETTINGS_KEY = 'iron_track_settings_v14';
+const HIST_KEY = 'iron_track_history_v1';
+const SESSLOG_KEY = 'iron_track_sessionlog_v1';
+const MCHALLENGE_KEY = 'iron_track_mchallenge_v1';
+const PHOTOS_KEY = 'iron_track_photos_v1';
+
+const MUSCLE_COLORS = {
+  chest: '#00e5ff', back: '#ffd700', arm: '#ff2a6d',
+  shoulder: '#00ff9d', legs: '#7a5cff', cardio: '#ff8c42'
+};
+const MUSCLE_LABELS = { chest: 'صدر', back: 'ظهر', arm: 'ذراع', shoulder: 'أكتاف', legs: 'أرجل', cardio: 'كارديو' };
 
 // --- STATE ---
 let data = [[],[],[],[]];
 let dayNames = ["Day 1", "Day 2", "Day 3", "Day 4"];
-let userStats = { xp: 0, lastLogin: Date.now(), isInjured: false };
+let userStats = { xp: 0, lastLogin: Date.now(), isInjured: false, totalSets: 0, totalSessions: 0, prCount: 0, challengeWins: 0, streakDays: 0, lastSessionDate: null, achievements: [] };
+let exHistory = {}; // { "exercise name": [{date, weight, reps, oneRM}, ...] }
+let sessionLog = []; // [{date, volume, sets, muscles:{chest:2,...}}]
 let userProfile = { name: '', age: '', weight: '' };
-let appSettings = { restTime: 180 };
+let appSettings = { restTime: 180, travelMode: false };
 let personalRecords = {};
+let monthlyChallenge = null; // { month:'2026-09', text, target, current }
+let progressPhotos = {}; // { 'YYYY-MM': dataURL }
 let curDay = 0;
 let tempWizardData = { idx: -1, rpe: null, form: true }; 
 let challengeState = 0;
@@ -627,6 +815,42 @@ const TIPS = [
   "الكارديو الخفيف بيساعد في الاستشفاء وبيقلل الوجع.",
 ];
 
+const CHALLENGE_POOL = [
+  { text: '100 عقلة الشهر ده 🏋️', target: 100 },
+  { text: '500 بطن الشهر ده 🔥', target: 500 },
+  { text: '20 كم جري تراكمي', target: 20 },
+  { text: '50 ضغط متتالي (Max Set)', target: 50 },
+  { text: '10 جلسات تمرين كاملة', target: 10 },
+  { text: '30 كم مشي/كارديو تراكمي', target: 30 },
+  { text: '15 دقيقة بلانك تراكمي (بالثواني: 900)', target: 900 },
+];
+
+const ACHIEVEMENTS = [
+  { id: 'first_set',    name: 'أول خطوة',      emoji: '🥉', desc: 'سجلت أول مجموعة',             cond: s => s.totalSets >= 1 },
+  { id: 'sets_100',     name: 'مية مجموعة',     emoji: '🥈', desc: '100 مجموعة متسجلة',            cond: s => s.totalSets >= 100 },
+  { id: 'sets_500',     name: 'الماكينة',       emoji: '🥇', desc: '500 مجموعة متسجلة',            cond: s => s.totalSets >= 500 },
+  { id: 'first_pr',     name: 'رقم قياسي',      emoji: '🏆', desc: 'أول رقم قياسي شخصي',           cond: s => s.prCount >= 1 },
+  { id: 'pr_10',        name: 'كسّار أرقام',    emoji: '📈', desc: '10 أرقام قياسية',              cond: s => s.prCount >= 10 },
+  { id: 'streak_3',     name: 'بداية جادة',     emoji: '🔥', desc: '3 جلسات على التوالي',          cond: s => s.streakDays >= 3 },
+  { id: 'streak_7',     name: 'أسبوع ناري',     emoji: '🔥', desc: '7 جلسات على التوالي',          cond: s => s.streakDays >= 7 },
+  { id: 'streak_30',    name: 'وحش شهر كامل',   emoji: '🌋', desc: '30 جلسة على التوالي',          cond: s => s.streakDays >= 30 },
+  { id: 'challenge_1',  name: 'كسرت التحدي',    emoji: '😤', desc: 'أول مرة تكسب تحدي',            cond: s => s.challengeWins >= 1 },
+  { id: 'challenge_10', name: 'يعنتيل رسمي',    emoji: '🦍', desc: '10 تحديات مكسورة',             cond: s => s.challengeWins >= 10 },
+  { id: 'sessions_20',  name: 'مواظب',          emoji: '📅', desc: '20 جلسة كاملة',                cond: s => s.totalSessions >= 20 },
+  { id: 'sessions_100', name: 'أسطورة الجيم',   emoji: '👑', desc: '100 جلسة كاملة',               cond: s => s.totalSessions >= 100 },
+];
+
+function checkAchievements() {
+  ACHIEVEMENTS.forEach(a => {
+    if (!userStats.achievements.includes(a.id) && a.cond(userStats)) {
+      userStats.achievements.push(a.id);
+      showToast(`${a.emoji} وسام جديد: ${a.name}!`);
+      playDing(); vibrateDevice([100,60,100]);
+    }
+  });
+  save();
+}
+
 // --- INIT ---
 function load(){
   if(localStorage.getItem(KEY)) data = JSON.parse(localStorage.getItem(KEY));
@@ -635,9 +859,21 @@ function load(){
   if(localStorage.getItem(DAYS_KEY)) dayNames = JSON.parse(localStorage.getItem(DAYS_KEY));
   if(localStorage.getItem(PROFILE_KEY)) userProfile = JSON.parse(localStorage.getItem(PROFILE_KEY));
   if(localStorage.getItem(SETTINGS_KEY)) appSettings = JSON.parse(localStorage.getItem(SETTINGS_KEY));
+  if(localStorage.getItem(HIST_KEY)) exHistory = JSON.parse(localStorage.getItem(HIST_KEY));
+  if(localStorage.getItem(SESSLOG_KEY)) sessionLog = JSON.parse(localStorage.getItem(SESSLOG_KEY));
+  if(localStorage.getItem(MCHALLENGE_KEY)) monthlyChallenge = JSON.parse(localStorage.getItem(MCHALLENGE_KEY));
+  if(localStorage.getItem(PHOTOS_KEY)) progressPhotos = JSON.parse(localStorage.getItem(PHOTOS_KEY));
+  if(appSettings.travelMode === undefined) appSettings.travelMode = false;
   
   if(userStats.isInjured === undefined) userStats.isInjured = false;
   if(userStats.lastLogin === undefined) userStats.lastLogin = Date.now();
+  if(userStats.totalSets === undefined) userStats.totalSets = 0;
+  if(userStats.totalSessions === undefined) userStats.totalSessions = 0;
+  if(userStats.prCount === undefined) userStats.prCount = 0;
+  if(userStats.challengeWins === undefined) userStats.challengeWins = 0;
+  if(userStats.streakDays === undefined) userStats.streakDays = 0;
+  if(userStats.lastSessionDate === undefined) userStats.lastSessionDate = null;
+  if(userStats.achievements === undefined) userStats.achievements = [];
 
   checkStreak();
   while(data.length < dayNames.length) data.push([]);
@@ -646,11 +882,14 @@ function load(){
   document.getElementById('userAgeInput').value = userProfile.age || '';
   document.getElementById('userBwInput').value = userProfile.weight || '';
   document.getElementById('injuryToggle').checked = userStats.isInjured;
+  document.getElementById('travelToggle').checked = !!appSettings.travelMode;
   document.getElementById('restTimeSetting').value = appSettings.restTime || 180;
 
   updateUserHello();
   renderTabs();
   updateXPUI();
+  updateStreakUI();
+  checkMonthlyChallenge();
   render();
   calculateVolume();
 }
@@ -662,6 +901,10 @@ function save(){
   localStorage.setItem(DAYS_KEY, JSON.stringify(dayNames));
   localStorage.setItem(PROFILE_KEY, JSON.stringify(userProfile));
   localStorage.setItem(SETTINGS_KEY, JSON.stringify(appSettings));
+  localStorage.setItem(HIST_KEY, JSON.stringify(exHistory));
+  localStorage.setItem(SESSLOG_KEY, JSON.stringify(sessionLog));
+  localStorage.setItem(MCHALLENGE_KEY, JSON.stringify(monthlyChallenge));
+  localStorage.setItem(PHOTOS_KEY, JSON.stringify(progressPhotos));
 }
 
 function debouncedSave() {
@@ -680,6 +923,7 @@ function calculateVolume() {
         });
     }
     document.getElementById('volumeDisp').innerHTML = `<i class="fa-solid fa-weight-hanging"></i> ${total.toLocaleString()} KG`;
+    updatePowerScore(total);
 }
 
 // --- STREAK & PROFILE ---
@@ -687,11 +931,13 @@ function checkStreak() {
   const now = Date.now();
   const diffTime = Math.abs(now - userStats.lastLogin);
   const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)); 
-  if (diffDays > 7 && !userStats.isInjured && userStats.xp > 0) {
+  if (diffDays > 7 && !userStats.isInjured && !appSettings.travelMode && userStats.xp > 0) {
     userStats.xp = 0; save();
     document.getElementById('modalWipeout').classList.add('open');
   }
-  userStats.lastLogin = now; save();
+  // NOTE: lastLogin is intentionally NOT updated here.
+  // It only updates in finishSession(), so just opening the app
+  // doesn't reset your streak clock without actually training.
 }
 function closeWipeout() { document.getElementById('modalWipeout').classList.remove('open'); updateXPUI(); }
 function toggleInjury() { userStats.isInjured = document.getElementById('injuryToggle').checked; save(); showToast(userStats.isInjured ? "ألف سلامة ❤️" : "حمدالله ع السلامة"); }
@@ -722,16 +968,25 @@ function renderTabs() {
     c.appendChild(btn);
   });
 }
-function switchDay(i){ curDay = i; renderTabs(); render(); calculateVolume(); }
+function stopAllCardioTimers(){
+  Object.keys(cardioIntervals).forEach(k => clearInterval(cardioIntervals[k]));
+  cardioIntervals = {};
+}
+function switchDay(i){ stopAllCardioTimers(); curDay = i; renderTabs(); render(); calculateVolume(); }
 
 function render(){
+  if(typeof stopAllCardioTimers === 'function') stopAllCardioTimers();
   const c = document.getElementById('appContent');
   c.innerHTML = '';
   const dayDiv = document.createElement('div');
   dayDiv.className = 'day-container active';
   
   if(data[curDay].length === 0) {
-    dayDiv.innerHTML = `<div style="text-align:center;padding:60px 20px;color:#444"><i class="fa-solid fa-dumbbell" style="font-size:50px;margin-bottom:15px;opacity:0.5"></i><br>يومك فاضي يا وحش.</div>`;
+    dayDiv.innerHTML = `<div style="text-align:center;padding:60px 20px;color:#444">
+        <i class="fa-solid fa-dumbbell" style="font-size:50px;margin-bottom:15px;opacity:0.5;color:var(--primary)"></i><br>
+        <div style="color:#888;font-size:15px;font-weight:700;margin-bottom:6px">يومك فاضي يا وحش</div>
+        <div style="color:#555;font-size:12px">افتح غرفة التحكم واضغط "تمرين جديد" عشان تبدأ</div>
+      </div>`;
   } else {
     data[curDay].forEach((ex, i) => {
       // CARDIO RENDER
@@ -760,8 +1015,9 @@ function render(){
       }
 
       // STRENGTH RENDER
-      const isDone = ex.done >= ex.target;
-      const pct = Math.min(100, (ex.done/ex.target)*100);
+      const effTarget = getEffectiveTarget(ex);
+      const isDone = ex.done >= effTarget;
+      const pct = Math.min(100, (ex.done/effTarget)*100);
       let dotColor = '';
       if(ex.rpeVal === 'easy') dotColor = 'var(--success)';
       if(ex.rpeVal === 'medium') dotColor = 'var(--gold)';
@@ -773,27 +1029,73 @@ function render(){
         oneRM = Math.round(ex.weight * (1 + ex.reps / 30));
       }
 
+      // Ghost comparison: best 1RM ever logged for this exercise, compared live
+      const ghostHist = exHistory[ex.name.trim()] || [];
+      const ghostBest = ghostHist.length ? Math.max(...ghostHist.map(h => h.oneRM)) : 0;
+      let ghostHTML = '';
+      if(ghostBest > 0) {
+        const beating = oneRM > ghostBest;
+        const tying = oneRM === ghostBest;
+        const ghostColor = beating ? 'var(--success)' : (tying ? 'var(--gold)' : '#666');
+        const ghostMsg = beating ? `أعلى من شبحك! (${ghostBest}kg)` : (tying ? `متعادل مع شبحك (${ghostBest}kg)` : `شبحك: ${ghostBest}kg`);
+        ghostHTML = `<div id="ghost-${i}" data-best="${ghostBest}" style="font-size:10px;color:${ghostColor};margin-top:3px;display:flex;align-items:center;gap:4px"><i class="fa-solid fa-ghost"></i> ${ghostMsg}</div>`;
+      } else {
+        ghostHTML = `<div id="ghost-${i}" data-best="0" style="display:none"></div>`;
+      }
+
+      const badgeColor = ex.muscle && MUSCLE_COLORS[ex.muscle] ? MUSCLE_COLORS[ex.muscle] : 'var(--primary)';
+
+      // Plateau detection: last 3 logged sessions show no real progress on 1RM
+      const exName = ex.name.trim();
+      const isPlateau = checkPlateau(exName);
+
+      // "Last week rival": closest history entry to ~7 days ago
+      const lw = getLastWeekEntry(exName);
+      const lastWeekHTML = lw
+        ? `<div class="lastweek-chip"><i class="fa-solid fa-clock-rotate-left"></i> زمان (${lw.daysAgo} يوم): <b>${lw.weight}kg × ${lw.reps}</b></div>`
+        : '';
+
+      const noteHTML = ex.note
+        ? `<div class="note-text"><i class="fa-solid fa-note-sticky note-btn" onclick="editNote(${i})"></i> ${ex.note}</div>`
+        : '';
+
       const card = document.createElement('div');
       card.className = `card ${isDone?'completed':''}`;
       card.id = `c-${i}`;
       
+      const suggestionChip = (ex.suggestedWeight !== undefined && ex.suggestedWeight !== ex.weight)
+        ? `<div style="margin:-4px 0 10px;display:flex;align-items:center;gap:8px;background:rgba(0,229,255,0.08);border:1px solid rgba(0,229,255,0.3);border-radius:10px;padding:6px 10px;font-size:12px;color:var(--primary)">
+             <i class="fa-solid fa-lightbulb"></i> جرب ${ex.suggestedWeight} كجم النهارده
+             <button onclick="applySuggestion(${i})" style="margin-right:auto;background:var(--primary);color:#000;border:none;border-radius:6px;padding:4px 10px;font-weight:800;font-size:11px;cursor:pointer">تطبيق</button>
+           </div>`
+        : '';
+
       card.innerHTML = `
         ${dotColor ? `<div style="width:8px;height:8px;border-radius:50%;background:${dotColor};position:absolute;top:15px;left:15px;box-shadow:0 0 8px ${dotColor}"></div>` : ''}
 
         <div class="card-header">
-          <div style="display:flex;align-items:center;gap:10px;width:80%">
-             ${ex.muscle ? `<span class="muscle-badge">${ex.muscle}</span>` : ''}
+          <div style="display:flex;align-items:center;gap:10px;width:70%">
+             ${ex.muscle ? `<span class="muscle-badge" style="background:${badgeColor}">${ex.muscle}</span>` : ''}
              ${ex.skippedChallenge ? `<span class="skipped-badge visible" title="تحدي فاتك">⚠️</span>` : ''}
+             ${isPlateau ? `<span class="plateau-badge" title="راكد! جرب دروب سيت أو غير الريبس" onclick="showPlateauTip('${exName.replace(/'/g,"")}')">⏸️ راكد</span>` : ''}
              <input class="ex-title" value="${ex.name}" onchange="upd(${i},'name',this.value)">
           </div>
-          <i class="fa-solid fa-trash" style="color:#444;padding:10px" onclick="del(${i})"></i>
+          <div style="display:flex;align-items:center;gap:12px">
+            <i class="fa-solid fa-note-sticky" style="color:${ex.note?'var(--gold)':'#555'};cursor:pointer" onclick="editNote(${i})"></i>
+            <i class="fa-solid fa-fire" style="color:#555;cursor:pointer" onclick="openWarmup(${i})"></i>
+            <i class="fa-solid fa-chart-line" style="color:#555;cursor:pointer" onclick="openHistory(${i})"></i>
+            <i class="fa-solid fa-trash" style="color:#444;cursor:pointer" onclick="del(${i})"></i>
+          </div>
         </div>
+        ${noteHTML}
+        ${lastWeekHTML}
+        ${suggestionChip}
         
         <div class="sets-row">
           <span>${isDone ? 'تمت المهمة' : 'المجموعات'}</span>
           <div class="sets-control-group">
             <button class="mini-btn" onclick="modTarget(${i}, -1)">-</button>
-            <div class="sets-display sets-val" id="sets-disp-${i}">${ex.done} <span style="color:#555">/</span> ${ex.target}</div>
+            <div class="sets-display sets-val" id="sets-disp-${i}">${ex.done} <span style="color:#555">/</span> ${effTarget}${appSettings.travelMode ? '<span style="color:var(--gold);font-size:9px"> ✈️</span>' : ''}</div>
             <button class="mini-btn" onclick="modTarget(${i}, 1)">+</button>
           </div>
         </div>
@@ -822,6 +1124,7 @@ function render(){
                  KG +/-
               </button>
             </div>
+            ${ghostHTML}
           </div>
         </div>
         
@@ -870,7 +1173,8 @@ function modTarget(i, d) {
   data[curDay][i].target = v; save();
   
   // Direct DOM Update
-  document.getElementById(`sets-disp-${i}`).innerHTML = `${data[curDay][i].done} <span style="color:#555">/</span> ${v}`;
+  const effT = getEffectiveTarget(data[curDay][i]);
+  document.getElementById(`sets-disp-${i}`).innerHTML = `${data[curDay][i].done} <span style="color:#555">/</span> ${effT}${appSettings.travelMode ? '<span style="color:var(--gold);font-size:9px"> ✈️</span>' : ''}`;
   updateProgressBar(i);
 }
 
@@ -894,420 +1198,67 @@ function update1RM(i) {
   const oneRM = Math.round(ex.weight * (1 + ex.reps / 30));
   const el = document.getElementById(`rm-disp-${i}`);
   if(el) el.innerText = `1RM: ${oneRM}kg`;
-}
 
-function checkRepsInput(i,v){ upd(i,'reps',v); checkRepTrigger(i,parseFloat(v)); update1RM(i); calculateVolume(); }
-
-// PLATE SYSTEM LOGIC (LAG FREE)
-function openPlateRack(i) {
-  currentWeightEditIdx = i;
-  setPlateMode(1);
-  document.getElementById('modalPlates').classList.add('open');
-}
-function setPlateMode(m) {
-  plateMode = m;
-  const addBtn = document.getElementById('modeAdd');
-  const subBtn = document.getElementById('modeSub');
-  if(m === 1) { addBtn.classList.add('active', 'add'); subBtn.classList.remove('active', 'sub'); } 
-  else { addBtn.classList.remove('active', 'add'); subBtn.classList.add('active', 'sub'); }
-}
-function closePlates() { document.getElementById('modalPlates').classList.remove('open'); currentWeightEditIdx = -1; }
-function addPlateWeight(val) {
-  if (currentWeightEditIdx === -1) return;
-  const delta = val * plateMode;
-  let currentW = data[curDay][currentWeightEditIdx].weight || 0;
-  currentW += delta; if(currentW < 0) currentW = 0;
-  data[curDay][currentWeightEditIdx].weight = currentW;
-  save();
-  
-  // Direct DOM Update
-  document.getElementById(`w-text-${currentWeightEditIdx}`).innerText = currentW;
-  update1RM(currentWeightEditIdx);
-  calculateVolume();
-  
-  showToast(`تم ${plateMode===1?'إضافة':'خصم'} ${val} كجم`);
-}
-function resetWeight() {
-  if (currentWeightEditIdx === -1) return;
-  if(confirm("تصفير الوزن؟")) {
-    data[curDay][currentWeightEditIdx].weight = 0; save();
-    document.getElementById(`w-text-${currentWeightEditIdx}`).innerText = 0;
-    update1RM(currentWeightEditIdx);
-    calculateVolume();
-    closePlates();
+  const ghostEl = document.getElementById(`ghost-${i}`);
+  if(ghostEl) {
+    const best = parseFloat(ghostEl.dataset.best) || 0;
+    if(best > 0) {
+      const beating = oneRM > best, tying = oneRM === best;
+      const color = beating ? 'var(--success)' : (tying ? 'var(--gold)' : '#666');
+      const msg = beating ? `أعلى من شبحك! (${best}kg)` : (tying ? `متعادل مع شبحك (${best}kg)` : `شبحك: ${best}kg`);
+      ghostEl.style.display = 'flex';
+      ghostEl.style.color = color;
+      ghostEl.innerHTML = `<i class="fa-solid fa-ghost"></i> ${msg}`;
+    }
   }
 }
 
-// MUSCLE MENU LOGIC
-function openMuscleMenu() {
-  closeAll();
-  renderMainMuscles();
-  document.getElementById('modalMuscle').classList.add('open');
-}
-function closeMuscleMenu() { document.getElementById('modalMuscle').classList.remove('open'); }
-
-function renderMainMuscles() {
-  const grid = document.getElementById('muscleGrid');
-  const bread = document.getElementById('muscleBreadcrumb');
-  bread.style.display = 'none';
-  grid.innerHTML = '';
-  
-  MUSCLES.main.forEach(m => {
-    const el = document.createElement('div');
-    el.className = 'muscle-card';
-    el.innerHTML = `<div class="muscle-icon-svg"><i class="fa-solid ${m.icon}" style="font-size:40px;color:#777"></i></div><span class="muscle-name">${m.name}</span>`;
-    el.onclick = () => {
-      if(m.id === 'cardio') {
-        addExercise('كارديو', 'cardio', 'cardio');
-      } else {
-        renderSubMuscles(m.id);
-      }
-    };
-    grid.appendChild(el);
-  });
-}
-
-function renderSubMuscles(mainId) {
-  const grid = document.getElementById('muscleGrid');
-  const bread = document.getElementById('muscleBreadcrumb');
-  bread.style.display = 'block';
-  grid.innerHTML = '';
-  
-  const subs = MUSCLES.sub[mainId];
-  if(!subs) return;
-  
-  subs.forEach(s => {
-    const el = document.createElement('div');
-    el.className = 'muscle-card';
-    
-    // BUILD SVG PROGRAMMATICALLY
-    let svgContent = '';
-    if(s.svgType && ANATOMY_ICONS[s.svgType]) {
-        const iconDef = ANATOMY_ICONS[s.svgType];
-        svgContent = `<svg viewBox="0 0 100 100">${iconDef.base}`;
-        // Add specific highlight
-        if(s.highlight && iconDef[s.highlight]) {
-            svgContent += iconDef[s.highlight];
-        }
-        svgContent += `</svg>`;
-    }
-
-    el.innerHTML = `<div class="muscle-icon-svg">${svgContent}</div><span class="muscle-name">${s.name}</span>`;
-    el.onclick = () => addExercise(s.name, mainId, 'strength');
-    grid.appendChild(el);
-  });
-}
-
-function addExercise(name, muscleGroup, type) {
-  closeMuscleMenu();
-  if(type === 'cardio') {
-    data[curDay].push({name: name, type: 'cardio', targetTime: 20, done: false});
-  } else {
-    data[curDay].push({name: name, muscle: muscleGroup, type: 'strength', target: 3, done: 0, reps: 10, weight: 10, skippedChallenge: false, challengeActive: false});
-  }
-  save(); render();
-  setTimeout(() => window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' }), 100);
-}
-
-// CARDIO TIMER
-let cardioIntervals = {};
-function toggleCardio(i) {
-  const display = document.getElementById(`cardio-timer-${i}`);
-  if(cardioIntervals[i]) {
-    clearInterval(cardioIntervals[i]);
-    delete cardioIntervals[i];
-    return;
-  }
-  let totalSecs = (parseFloat(data[curDay][i].targetTime)||10) * 60;
-  let elapsed = 0;
-  cardioIntervals[i] = setInterval(() => {
-    elapsed++;
-    let rem = totalSecs - elapsed;
-    if(rem <= 0) {
-      clearInterval(cardioIntervals[i]);
-      delete cardioIntervals[i];
-      alert("عاش يا وحش الكارديو خلص! 🔥");
-    }
-    let m = Math.floor(rem / 60);
-    let s = rem % 60;
-    display.innerText = `${m}:${s<10?'0'+s:s}`;
-  }, 1000);
-}
-
-// --- NEW CHALLENGE LOGIC ---
-let challengeIdx = -1;
-
-function checkRepTrigger(i, val){
-  if(val === 12) {
-    challengeIdx = i; challengeState = 0;
-    
-    // Reset modal UI
-    document.getElementById('challengeContent').style.display = 'block';
-    document.getElementById('challengePlates').classList.remove('visible');
-    
-    const btn = document.getElementById('btnShatter');
-    if(btn) { btn.classList.remove('cracked'); btn.style.visibility='visible'; btn.innerText = "هكسر امو🥵🦍"; }
-    
-    const quotes = ["الوزن ده بقى لعبة!", "وريني غضبك!", "إثبت إنك عنتيل!"];
-    document.getElementById('challengeQuote').innerText = quotes[Math.floor(Math.random()*quotes.length)];
-    
-    setTimeout(()=>document.getElementById('modalChallenge').classList.add('open'), 300);
-  }
-}
-
-function handleShatter(btn) {
-  if (challengeState === 0) {
-    btn.classList.add('cracked'); 
-    challengeState = 1;
-    // Hide content, show plates
-    setTimeout(() => {
-        document.getElementById('challengeContent').style.display = 'none';
-        document.getElementById('challengePlates').classList.add('visible');
-    }, 400);
-  }
-}
-
-function confirmChallengeWeight(val) {
-    if(challengeIdx === -1) return;
-    
-    const ex = data[curDay][challengeIdx];
-    
-    // 1. Save original state
-    ex.originalWeight = ex.weight;
-    
-    // 2. Add weight
-    ex.weight += val;
-    ex.challengeActive = true;
-    ex.reps = 0; // RESET REPS TO 0
-    
-    save();
-    
-    // 3. Update DOM instantly
-    document.getElementById(`w-text-${challengeIdx}`).innerText = ex.weight;
-    document.getElementById(`reps-val-${challengeIdx}`).value = 0; // Update Input
-    update1RM(challengeIdx);
-    
-    // 4. Update Button Row to Split View
-    const actionContainer = document.getElementById(`action-container-${challengeIdx}`);
-    if(actionContainer) {
-        actionContainer.innerHTML = renderActionButtons(ex, challengeIdx, false);
-    }
-
-    document.getElementById('modalChallenge').classList.remove('open');
-    showToast(`عاش! زودنا ${val} كجم 🔥`);
-}
-
-function successChallenge(i) {
-    const ex = data[curDay][i];
-    ex.challengeActive = false;
-    // Keep weight as is, record set normaly
-    addSet(i);
-    // Revert button to normal state
-    const actionContainer = document.getElementById(`action-container-${i}`);
-    if(actionContainer) {
-        actionContainer.innerHTML = renderActionButtons(ex, i, ex.done >= ex.target);
-    }
-}
-
-function failChallenge(i) {
-    const ex = data[curDay][i];
-    
-    // Calculate difference from original
-    const diff = ex.weight - ex.originalWeight;
-
-    if (diff > 2.5) {
-        // CASE: DROP 2.5KG AND TRY AGAIN
-        ex.weight -= 2.5;
-        save();
-        // Update UI
-        document.getElementById(`w-text-${i}`).innerText = ex.weight;
-        update1RM(i);
-        showToast("نزلتلك 2.5 كجم، جرب تاني! 💪");
-        // Keep buttons split (Challenge Active)
-    } else {
-        // CASE: LAST STEP (Only 2.5kg left or originally 2.5kg)
-        ex.weight = ex.originalWeight;
-        ex.reps = 12; // Reset reps to 12
-        ex.challengeActive = false;
-        ex.skippedChallenge = true; // Remind next time
-        
-        save();
-        
-        // Update UI Instantly
-        document.getElementById(`w-text-${i}`).innerText = ex.weight;
-        document.getElementById(`reps-val-${i}`).value = 12;
-        update1RM(i);
-        
-        // Revert Button
-        const actionContainer = document.getElementById(`action-container-${i}`);
-        if(actionContainer) {
-            actionContainer.innerHTML = renderActionButtons(ex, i, false);
-        }
-        
-        render(); // Safe to render here to show the badge
-        showToast("ولا يهمك، المرة الجاية هنجيبها 😉");
-    }
-}
-
-function declineChallenge(){ 
-    if(challengeIdx !== -1 && data[curDay][challengeIdx]) {
-        data[curDay][challengeIdx].skippedChallenge = true;
-        save();
-        render(); // Re-render to show the badge
-    }
-    document.getElementById('modalChallenge').classList.remove('open'); 
-}
-
-// REST TIMER (POPUP)
-let restInterval = null;
-let restSeconds = 0;
-
-function startRestTimer() {
-  stopRestTimer();
-  restSeconds = appSettings.restTime || 180;
-  document.getElementById('restTimerPopup').classList.add('visible');
-  updateRestDisplay();
-  
-  restInterval = setInterval(() => {
-    restSeconds--;
-    if(restSeconds <= 0) {
-      stopRestTimer();
-      alert("الراحة خلصت! يلا 🔥");
-    } else {
-      updateRestDisplay();
-    }
-  }, 1000);
-}
-function stopRestTimer() {
-  clearInterval(restInterval);
-  document.getElementById('restTimerPopup').classList.remove('visible');
-}
-function updateRestDisplay() {
-  const m = Math.floor(restSeconds / 60);
-  const s = restSeconds % 60;
-  document.getElementById('rtDisplay').innerText = `${m < 10 ? '0'+m : m}:${s < 10 ? '0'+s : s}`;
-}
-
-// WORKOUT LOGIC
-function addSet(i){
+function applySuggestion(i) {
   const ex = data[curDay][i];
-  if(ex.done < ex.target) {
-    ex.done++;
-    const gain = (ex.weight * ex.reps) / 25; 
-    addXP(gain > 0 ? gain : 5);
-    checkPR(ex);
-    save(); 
-    calculateVolume();
-    
-    // Direct UI Update
-    document.getElementById(`sets-disp-${i}`).innerHTML = `${ex.done} <span style="color:#555">/</span> ${ex.target}`;
-    updateProgressBar(i);
-
-    if(ex.done < ex.target) {
-       startRestTimer(); 
-    }
-  } else {
-    const c = document.getElementById(`c-${i}`);
-    c.style.animation='none'; void c.offsetWidth; c.style.animation='shakeHard 0.3s';
-  }
+  if(!ex || ex.suggestedWeight === undefined) return;
+  ex.weight = ex.suggestedWeight;
+  delete ex.suggestedWeight;
+  save();
+  render();
+  showToast('اتطبق الوزن المقترح 💪');
 }
 
-function updateProgressBar(i) {
-    const ex = data[curDay][i];
-    const pct = Math.min(100, (ex.done/ex.target)*100);
-    const bar = document.getElementById(`prog-fill-${i}`);
-    const card = document.getElementById(`c-${i}`);
-    const btn = document.getElementById(`btn-finish-${i}`);
-
-    if(bar) bar.style.width = `${pct}%`;
-    
-    if(ex.done >= ex.target) {
-        card.classList.add('completed');
-        if(btn) { btn.classList.add('active'); btn.innerHTML = '<i class="fa-solid fa-check"></i>'; }
-        openWizard(i);
-    }
-}
-
-function checkPR(ex) {
+// --- PROGRESS HISTORY (SPARKLINE) ---
+function openHistory(i) {
+  const ex = data[curDay][i];
+  if(!ex) return;
   const name = ex.name.trim();
-  const oldRec = personalRecords[name] || 0;
-  if (ex.weight > oldRec) {
-    personalRecords[name] = ex.weight; save();
-    showToast(`🏆 رقم قياسي جديد: ${ex.weight}kg!`);
-  }
-}
+  const hist = exHistory[name] || [];
+  const modal = document.getElementById('modalHistory');
+  const body = document.getElementById('historyBody');
+  document.getElementById('historyTitle').innerText = `تطور: ${name}`;
 
-// XP & RANKS
-function addXP(amount) { userStats.xp += Math.round(amount); updateXPUI(); save(); }
-function updateXPUI() {
-  let currentRank = RANKS[0];
-  for(let i=0; i<RANKS.length; i++) {
-    if(userStats.xp >= RANKS[i].limit) { currentRank = RANKS[i]; }
-  }
-  document.getElementById('xpFill').style.width = '100%'; 
-  document.getElementById('rankDisp').innerText = `${currentRank.title} • ${Math.floor(userStats.xp)} XP`;
-}
+  if(hist.length === 0) {
+    body.innerHTML = `<div style="color:#666;padding:20px 0">لسه مفيش جلسات متسجلة للتمرين ده. خلص جلسة بيه عشان يبدأ يتسجل هنا.</div>`;
+  } else {
+    const w = 280, h = 120, pad = 20;
+    const vals = hist.map(h => h.oneRM);
+    const maxV = Math.max(...vals, 1), minV = Math.min(...vals, 0);
+    const range = (maxV - minV) || 1;
+    const stepX = hist.length > 1 ? (w - pad*2) / (hist.length - 1) : 0;
+    const points = hist.map((entry, idx) => {
+      const x = pad + idx * stepX;
+      const y = (h - pad) - ((entry.oneRM - minV) / range) * (h - pad*2);
+      return `${x},${y}`;
+    }).join(' ');
 
-// WIZARD
-function openWizard(i) {
-  tempWizardData = { idx: i, rpe: null, form: true };
-  document.querySelectorAll('.rpe-btn').forEach(b => b.classList.remove('selected'));
-  document.getElementById('btnFormGood').className = 'modal-btn btn-outline';
-  document.getElementById('btnFormBad').className = 'modal-btn btn-outline';
-  document.getElementById('modalWizard').classList.add('open');
-}
-function selectRPE(val, btn){ tempWizardData.rpe = val; document.querySelectorAll('.rpe-btn').forEach(b => b.classList.remove('selected')); btn.classList.add('selected'); }
-function selectForm(v){ tempWizardData.form = v; document.getElementById('btnFormGood').className = v ? 'modal-btn btn-primary' : 'modal-btn btn-outline'; document.getElementById('btnFormBad').className = !v ? 'modal-btn btn-danger' : 'modal-btn btn-outline'; }
-function submitWizard(){
-  const {idx, rpe} = tempWizardData;
-  if(idx>-1) { data[curDay][idx].rpeVal = rpe; save(); render(); }
-  document.getElementById('modalWizard').classList.remove('open');
-}
+    const last = hist[hist.length-1];
+    const first = hist[0];
+    const trend = last.oneRM - first.oneRM;
+    const trendColor = trend > 0 ? 'var(--success)' : (trend < 0 ? 'var(--danger)' : '#888');
+    const trendIcon = trend > 0 ? '▲' : (trend < 0 ? '▼' : '—');
 
-// UTILS
-function showToast(m){
-  const c = document.getElementById('toastContainer');
-  const d = document.createElement('div');
-  d.className='toast'; d.innerText=m; c.appendChild(d);
-  setTimeout(()=>{ d.style.opacity='0'; setTimeout(()=>d.remove(),300) }, 2500);
-}
-
-const panel = document.getElementById('panel');
-const overlay = document.getElementById('overlay');
-function openPanel(){ overlay.classList.add('open'); panel.classList.add('open'); }
-function closeAll(){ 
-  overlay.classList.remove('open'); panel.classList.remove('open'); 
-  document.getElementById('modalChallenge').classList.remove('open');
-  document.getElementById('modalWizard').classList.remove('open');
-  document.getElementById('modalTips').classList.remove('open');
-  document.getElementById('modalMuscle').classList.remove('open');
-  document.getElementById('modalPlates').classList.remove('open');
-}
-
-function addBulk(){
-  for(let i=0; i<5; i++) { data[curDay].push({name:'تمرين إضافي',type:'strength',target:3,done:0,reps:10,weight:10}); }
-  save(); render(); showToast("تم إضافة 5 تمارين"); closeAll();
-}
-function clearAll(){ if(confirm('⚠️ هتمسح كل تاريخك ومستواك.. متأكد؟')) { localStorage.clear(); location.reload(); } }
-function del(i){ if(confirm('مسح التمرين؟')) { data[curDay].splice(i,1); save(); render(); } }
-
-function finishSession(){ 
-  if(confirm('خلصت تمرين؟')) {
-    data[curDay].forEach(e => { if(e.done > 0 && e.type !== 'cardio') { e.done = 0; e.rpeVal = null; } });
-    userStats.lastLogin = Date.now(); save(); render(); calculateVolume();
-    const tip = TIPS[Math.floor(Math.random()*TIPS.length)];
-    document.getElementById('tipText').innerText = tip;
-    document.getElementById('modalTips').classList.add('open');
-  } 
-}
-function closeTips() { document.getElementById('modalTips').classList.remove('open'); window.scrollTo({top:0, behavior:'smooth'}); }
-function addNewDay() { dayNames.push(document.getElementById('newDayName').value||`Day ${dayNames.length+1}`); data.push([]); save(); renderTabs(); switchDay(dayNames.length-1); closeAll(); }
-function renameCurrentDay() { const n=prompt("الاسم:",dayNames[curDay]); if(n){dayNames[curDay]=n;save();renderTabs();closeAll();} }
-function deleteCurrentDay() { if(dayNames.length<=1)return; if(confirm("مسح اليوم؟")){dayNames.splice(curDay,1);data.splice(curDay,1);curDay=0;save();renderTabs();render();closeAll();} }
-
-function addEmpty(){ openMuscleMenu(); }
-
-load();
-</script>
-</body>
-</html>
+    body.innerHTML = `
+      <div style="font-size:12px;color:#888;margin-bottom:10px">1RM التقديري عبر آخر ${hist.length} جلسة</div>
+      <svg viewBox="0 0 ${w} ${h}" style="width:100%;background:#0a0a0a;border-radius:10px;border:1px solid #222">
+        <polyline points="${points}" fill="none" stroke="var(--primary)" stroke-width="2.5"/>
+      </svg>
+      <div style="display:flex;justify-content:space-between;margin-top:12px;font-size:13px">
+        <span style="color:#888">أول: ${first.oneRM}kg</span>
+        <span style="color:${trendColor};font-weight:800">${trendIcon} ${Math.abs(trend)}kg</span>
+        <span style="color:#fff;font-weight:800">آخر: ${last.one
